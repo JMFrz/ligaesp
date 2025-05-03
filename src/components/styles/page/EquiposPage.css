@@ -1,0 +1,62 @@
+.equipos-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  text-align: center;
+  font-family: Arial, sans-serif;
+}
+
+.equipos-container h1 {
+  font-size: 32px;
+  color: #333333;
+  margin-bottom: 20px;
+}
+
+.equipos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.equipo-card {
+  background-color: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  text-align: center;
+  transition: transform 0.3s ease;
+}
+
+.equipo-card:hover {
+  transform: scale(1.05);
+}
+
+.equipo-imagen {
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+  margin-bottom: 10px;
+}
+
+.equipo-card h2 {
+  font-size: 20px;
+  color: #007bff;
+  margin-bottom: 10px;
+}
+
+.equipo-card p {
+  margin: 5px 0;
+  font-size: 14px;
+  color: #555555;
+}
+
+.estadisticas {
+  margin-top: 10px;
+  text-align: left;
+}
+
+.estadisticas p {
+  margin: 5px 0;
+  font-size: 14px;
+  color: #333333;
+}

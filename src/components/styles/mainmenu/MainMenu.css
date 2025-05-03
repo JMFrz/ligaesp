@@ -1,0 +1,41 @@
+.main-menu {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh; /* Ocupa toda la altura de la ventana */
+    background-color: #f4f4f9; /* Fondo claro */
+    font-family: Arial, sans-serif;
+  }
+  
+  .menu-options {
+    display: flex;
+    flex-direction: column; /* Coloca los botones en columna */
+    gap: 20px; /* Espaciado entre los botones */
+    text-align: center;
+  }
+  
+  .menu-link {
+    text-decoration: none; /* Elimina el subrayado de los enlaces */
+  }
+  
+  .menu-button {
+    padding: 15px 30px;
+    font-size: 18px;
+    font-weight: bold;
+    color: #ffffff;
+    background-color: #007bff; /* Azul */
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+  }
+  
+  .menu-button:hover {
+    background-color: #0056b3; /* Azul más oscuro al pasar el ratón */
+    transform: scale(1.05); /* Efecto de zoom */
+  }
+  
+  .menu-button:active {
+    background-color: #003f7f; /* Azul más oscuro al hacer clic */
+    transform: scale(0.95); /* Efecto de compresión */
+  }

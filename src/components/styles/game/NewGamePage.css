@@ -1,0 +1,103 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f9;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    height: 100vh; /* Asegura que el contenido esté centrado verticalmente */
+  }
+  
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    text-align: center; /* Centra el texto dentro del contenedor */
+    display: flex;
+    flex-direction: column; /* Asegura que los elementos estén en columna */
+    justify-content: center; /* Centra verticalmente los elementos internos */
+  }
+  
+  h1 {
+    color: #333333;
+  }
+  .team-logo {
+    height: 1.2em; /* Escala con el texto */
+    vertical-align: middle;
+    margin: 0 8px;
+  }
+  .scoreboard {
+    font-family:'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+    display: flex;
+    justify-content: center; /* Centra horizontalmente */
+    align-items: center; /* Centra verticalmente */
+    margin: 20px 0;
+    padding: 10px;
+    background-color: #cfcfcf;
+    border-radius: 8px;
+    width: 100%; /* Asegura que ocupe todo el ancho del contenedor */
+    font-size: 24px; /* Aumenta el tamaño del texto */
+    font-weight: bold; /* Hace el texto más grueso */
+    text-align: center; /* Centra el texto */
+  }
+  
+  .scoreboard p {
+    margin: 0 20px; /* Espaciado entre los textos */
+  }
+  
+  button {
+    display: inline-block;
+    padding: 10px 20px;
+    margin: 10px 5px;
+    font-size: 16px;
+    color: #ffffff;
+    background-color: #007bff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  
+  button:hover {
+    background-color: #0056b3;
+  }
+  
+  button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+  }
+  
+  .events-log {
+    margin-top: 20px;
+    width: 100%; /* Asegura que ocupe todo el ancho del contenedor */
+  }
+  
+  .events-log ul {
+    list-style-type: none;
+    padding: 0;
+  }
+  
+  .events-log li {
+    background-color: #f9f9f9;
+    margin: 5px 0;
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .opportunity {
+    margin-top: 20px;
+    text-align: center;
+    width: 100%; /* Asegura que ocupe todo el ancho del contenedor */
+  }
+  
+  .opportunity h2 {
+    color: #333333;
+  }
+  
+  .opportunity button {
+    margin: 5px;
+  }
