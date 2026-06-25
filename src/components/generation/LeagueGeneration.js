@@ -92,11 +92,7 @@ const LeagueGeneration = () => {
                 const equipos = JSON.parse(localStorage.getItem("equipos")) || [];
                 const nLiga = JSON.parse(localStorage.getItem("numLigas")) || [];
 
-                localStorage.clear();
-                sessionStorage.clear();
-                localStorage.setItem("equipos", JSON.stringify(equipos));
                 localStorage.setItem("esLigaPrimera", JSON.stringify(false));
-                localStorage.setItem("numLigas", JSON.stringify(nLiga));
                 console.log("Se ha entrado");
                 const ligas = agruparEquiposPorLiga(equipos);
                 const clasificacionesPorLiga = {};
@@ -152,6 +148,7 @@ const LeagueGeneration = () => {
             if(nLiga >= 1) {
                 console.log("Se ha entrado también");
                 try {
+                    actualizarRatingsEquipos();
                     console.log("1");
     
                     const ascensosDirectos_Liga2 = JSON.parse(localStorage.getItem("ascensoDirecto_Liga2") || "[]");
@@ -190,7 +187,7 @@ const LeagueGeneration = () => {
                     const ascensoPlayoff_TerceraRFEF = JSON.parse(localStorage.getItem("ascensoPlayoff_TerceraRFEF") || "[]");
                     const descenso_SegundaRFEF = JSON.parse(localStorage.getItem("descenso_SegundaRFEF") || "[]");
     
-                    const equipos = JSON.parse(localStorage.getItem("equipos")) || [];
+                    let equipos = JSON.parse(localStorage.getItem("equipos")) || [];
                     const clasificacion = JSON.parse(localStorage.getItem("clasificacion")) || {};
                     
                     descenso_SegundaRFEF.forEach((equipo) => {
@@ -307,6 +304,7 @@ const LeagueGeneration = () => {
                             cambiarLiga(equipoC.nombre, "Primera RFEF - Grupo 2");
                         }
                     });
+                    console.log(ascensoPlayoff_SegundaRFEF);
                     ascensoPlayoff_SegundaRFEF.forEach((equipo) => {
                         const equipoC = equipos.find(e => e.nombre === equipo);
                         if(equipoC.comunidad == "Cataluña" || equipoC.comunidad == "Galicia" || equipoC.comunidad == "Aragón" || equipoC.comunidad == "Asturias" || equipoC.comunidad == "Castilla y León" || equipoC.comunidad == "Cantabria" || equipoC.comunidad == "País Vasco" || equipoC.comunidad == "Navarra" || equipoC.comunidad == "La Rioja") {
@@ -330,6 +328,8 @@ const LeagueGeneration = () => {
                             cambiarLiga(equipoC.nombre, "Segunda RFEF - Grupo 5");
                         }
                     });
+                                        console.log(ascensoPlayoff_TerceraRFEF);
+
                     ascensoPlayoff_TerceraRFEF.forEach((equipo) => {
                         const equipoC = equipos.find(e => e.nombre === equipo);
                         if(equipoC.comunidad == "Galicia" || equipoC.comunidad == "Castilla y León" || equipoC.comunidad == "Asturias" || equipoC.comunidad == "Cantabria") {
@@ -380,6 +380,13 @@ const LeagueGeneration = () => {
                     while(numPrimeraRFEFGrupo1 > 20) {
                         console.log(numPrimeraRFEFGrupo1);
                         console.log(numPrimeraRFEFGrupo2);
+                        console.log(obtenerEquiposLiga("Primera RFEF - Grupo 1"));
+                        console.log(obtenerEquiposLiga("Primera RFEF - Grupo 2"));
+                        console.log(obtenerEquiposLiga("Primera RFEF - Grupo 3"));
+                        console.log(obtenerEquiposLiga("Primera RFEF - Grupo 4"));
+                        console.log(obtenerEquiposLiga("Primera RFEF - Grupo 1"));
+
+
                         let i = Math.floor(Math.random() * numPrimeraRFEFGrupo1);
                         cambiarLiga(equiposGrupo1PrimeraRFEF[i].nombre, "Primera RFEF - Grupo 2");
                         numPrimeraRFEFGrupo1 = obtenerNumeroEquiposLiga("Primera RFEF - Grupo 1");
@@ -548,9 +555,11 @@ const LeagueGeneration = () => {
                     gestionarDescensosTerceraRFEF("Tercera RFEF - Grupo 17", "Aragón", TRFEF["Tercera RFEF - Grupo 17"]);
                     gestionarDescensosTerceraRFEF("Tercera RFEF - Grupo 18", "Castilla-La Mancha", TRFEF["Tercera RFEF - Grupo 18"]);
                     console.log("7");
-
-                    generarLigas(true);
-    
+                    equipos = JSON.parse(localStorage.getItem("equipos")) || [];
+                    localStorage.clear();
+                    sessionStorage.clear();    
+                    localStorage.setItem("equipos", JSON.stringify(equipos));
+                    localStorage.setItem("numLigas", JSON.stringify(nLiga));
                 } catch (err) {
                     console.error("❌ Error al leer ascensos/descensos:", err);
                 }
@@ -561,67 +570,156 @@ const LeagueGeneration = () => {
         console.log(flag);
         generarLigas(flag === null ? true : flag); 
     }, []);
-    const gestionarDescensosTerceraRFEF = (grupo, comunidad, trfef) => {
-        let equiposLigaRegional = obtenerEquiposLiga("Regionales - " + comunidad);
-        const ultimosTres = trfef.slice(14,17);
-        Object.values(ultimosTres).forEach(equipo => {
-            console.log(equipo.nombre);
-          });        
-          
-          ultimosTres.forEach((equipo) => {
-            cambiarLiga(equipo.nombre, "Regionales - " + comunidad);
-        });
-        let i = 14;
+const gestionarDescensosTerceraRFEF = (grupo, comunidad, trfef) => {
+    let equiposLigaRegional = obtenerEquiposLiga("Regionales - " + comunidad);
+    const ultimosTres = trfef.slice(15,18);
+    
+    // Crear array para almacenar los equipos recién descendidos
+    const equiposDescendidos = ultimosTres.map(equipo => equipo.nombre);
+    
+    // Descender equipos
+    ultimosTres.forEach((equipo) => {
+        cambiarLiga(equipo.nombre, "Regionales - " + comunidad);
+    });
+    
+    let i = 14;
+    let numEquiposGrupoTerceraRFEF = obtenerNumeroEquiposLiga(grupo);
+    let equiposTerceraRFEF = obtenerEquiposLiga(grupo);
 
+    if(numEquiposGrupoTerceraRFEF > 15) {
+        while(numEquiposGrupoTerceraRFEF > 15) {
+            cambiarLiga(trfef[i].nombre, "Regionales - " + comunidad);
+            equiposDescendidos.push(trfef[i].nombre); // Añadir a la lista de descendidos
+            numEquiposGrupoTerceraRFEF = obtenerNumeroEquiposLiga(grupo);
+            i--;
+        }
 
-        let numEquiposGrupoTerceraRFEF = obtenerNumeroEquiposLiga(grupo);
-
-
-        let equiposTerceraRFEF = obtenerEquiposLiga(grupo);
-        console.log("1");
-        if(numEquiposGrupoTerceraRFEF > 15) {
-            while(numEquiposGrupoTerceraRFEF > 15) {
-                cambiarLiga(trfef[i].nombre, "Regionales - " + comunidad);
-                numEquiposGrupoTerceraRFEF = obtenerNumeroEquiposLiga(grupo);
-                i--;
+        for(let j = 0; j < 3; ++j) {
+            let id = Math.floor(Math.random()*equiposLigaRegional.length);
+            // Verificar que el equipo no está en la lista de descendidos
+            while(
+                equiposTerceraRFEF.includes(equiposLigaRegional[id]) || 
+                equiposDescendidos.includes(equiposLigaRegional[id].nombre)
+            ) {
+                id = Math.floor(Math.random()*equiposLigaRegional.length);
             }
-            console.log("2");
-            for(let j = 0; j < 3; ++j) {
+            cambiarLiga(equiposLigaRegional[id].nombre, grupo);
+            equiposLigaRegional = obtenerEquiposLiga("Regionales - " + comunidad);
+            equiposTerceraRFEF = obtenerEquiposLiga(grupo);
+        }
+    } else {
+        const ii = numEquiposGrupoTerceraRFEF;
+        while(numEquiposGrupoTerceraRFEF < 18) {
+            for(let j = 0; j < 18-ii; ++j) {
                 let id = Math.floor(Math.random()*equiposLigaRegional.length);
-                while(equiposTerceraRFEF.includes(equiposLigaRegional[id])) {
+                // Verificar que el equipo no está en la lista de descendidos
+                while(
+                    equiposTerceraRFEF.map(e => e.nombre).includes(equiposLigaRegional[id].nombre) ||
+                    equiposDescendidos.includes(equiposLigaRegional[id].nombre)
+                ) {
                     id = Math.floor(Math.random()*equiposLigaRegional.length);
                 }
-                cambiarLiga(equiposLigaRegional[id], grupo);
-                equiposLigaRegional = obtenerEquiposLiga("Regionales - " + comunidad);
-                equiposTerceraRFEF = obtenerEquiposLiga(grupo);
-            }
-            console.log("3");
-        }
-        else {
-            console.log("1.2");
-            const ii = numEquiposGrupoTerceraRFEF;
-            while(numEquiposGrupoTerceraRFEF < 18) {
-                for(let j = 0; j < 18-ii; ++j) {
-                    let id = Math.floor(Math.random()*equiposLigaRegional.length);
-                    console.log(j);
-                while(equiposTerceraRFEF.map(e => e.nombre).includes(equiposLigaRegional[id].nombre)) {
-                    id = Math.floor(Math.random()*equiposLigaRegional.length);
-                }
-                console.log(equiposLigaRegional[id]);
                 cambiarLiga(equiposLigaRegional[id].nombre, grupo);
-                console.log(equiposLigaRegional[id].liga);
-                console.log(numEquiposGrupoTerceraRFEF);
                 equiposLigaRegional = obtenerEquiposLiga("Regionales - " + comunidad);
                 equiposTerceraRFEF = obtenerEquiposLiga(grupo);
                 numEquiposGrupoTerceraRFEF = obtenerNumeroEquiposLiga(grupo);
-                }
             }
-            console.log("4");
         }
-
     }
+}
 
-  
+function actualizarRatingsEquipos() {
+    let equipos = JSON.parse(localStorage.getItem("equipos")) || [];
+    const clasificaciones = JSON.parse(localStorage.getItem("clasificacion")) || {};
+
+    // Recoger todos los equipos ascendidos y descendidos según las claves
+    const clavesAscenso = [
+        "ascensoDirecto_Liga2",
+        "ascensoPlayoff_Liga2",
+        "ascensoDirecto_PrimeraRFEF",
+        "ascensoPlayoff_PrimeraRFEF",
+        "ascensoDirecto_SegundaRFEF",
+        "ascensoPlayoff_SegundaRFEF",
+        "ascensoDirecto_TerceraRFEF",
+        "ascensoPlayoff_TerceraRFEF"
+    ];
+    const clavesDescenso = [
+        "descenso_LaLiga",
+        "descenso_Liga2",
+        "descenso_PrimeraRFEF",
+        "descenso_SegundaRFEF"
+    ];
+
+    const equiposAscendidos = new Set();
+    const equiposDescendidos = new Set();
+
+    clavesAscenso.forEach(clave => {
+        const arr = JSON.parse(localStorage.getItem(clave) || "[]");
+        arr.forEach(e => equiposAscendidos.add(e));
+    });
+    clavesDescenso.forEach(clave => {
+        const arr = JSON.parse(localStorage.getItem(clave) || "[]");
+        arr.forEach(e => equiposDescendidos.add(e));
+    });
+
+    equipos = equipos.map(equipo => {
+        const liga = equipo.liga;
+        const clasificacionLiga = clasificaciones[liga] || [];
+    const clasificacionOrdenada = [...clasificacionLiga].sort((a, b) => {
+            if (b.puntos !== a.puntos) return b.puntos - a.puntos;
+            if ((b.golesFavor - b.golesContra) !== (a.golesFavor - a.golesContra)) 
+                return (b.golesFavor - b.golesContra) - (a.golesFavor - a.golesContra);
+            return b.golesFavor - a.golesFavor;
+        });
+
+        const pos = clasificacionOrdenada.findIndex(e => e.id === equipo.id);
+        // Si no está en la clasificación, no modificar
+        if (pos === -1) return equipo;
+
+        // Ascendido: siempre sube rating
+        if (equiposAscendidos.has(equipo.nombre)) {
+            const r = Math.random();
+            if (r < 0.5) equipo.rating += 1;
+            else if (r < 0.85) equipo.rating += 2;
+            else equipo.rating += 3;
+        }
+        // Descendido: siempre baja rating
+        else if (equiposDescendidos.has(equipo.nombre)) {
+            const r = Math.random();
+            if (r < 0.5) equipo.rating -= 3;
+            else if (r < 0.85) equipo.rating -= 2;
+            else equipo.rating -= 1;
+        }
+        // Top 10: suben rating igual que los ascensos
+        else if (pos >= 0 && pos < 10) {
+            const r = Math.random();
+            if (r < 0.5) equipo.rating += 1;
+            else if (r < 0.75) equipo.rating += 2;
+            else if(r < 0.85) equipo.rating -= 1;
+        }
+        // Zona media: 50% igual, 50% bajan rating
+        else if (pos >= 10 && pos < (clasificacionLiga.length - obtenerDescensosLiga(liga))) {
+            if (Math.random() < 0.5) {
+                // Se queda igual
+            } else {
+                const r = Math.random();
+                if (r < 0.5) equipo.rating -= 1;
+                else if (r < 0.75) equipo.rating -= 2;
+                else if(r < 0.9) equipo.rating -= 3;
+                else equipo.rating += 1;
+            }
+        }
+        else if (pos >= (clasificacionLiga.length - obtenerDescensosLiga(liga))) {
+            const r = Math.random();
+            if (r < 0.5) equipo.rating -= 1;
+            else if (r < 0.85) equipo.rating += 1;
+            else equipo.rating += 2;
+        }
+        equipo.rating = Math.max(0, Math.min(100, equipo.rating));
+        return equipo;
+    });
+    localStorage.setItem("equipos", JSON.stringify(equipos));
+}
     const obtenerDescensosLiga = (liga) => {
         if (liga === "La Liga") return 3;
         if (liga === "Liga 2") return 4;
@@ -690,6 +788,7 @@ const asignarEquipoAGrupo = (equipo, grupoDestino) => {
             golesFavor: 0,
             golesContra: 0,
             diferenciaGoles: 0,
+            rating: equipo.rating
         }));
     };
 

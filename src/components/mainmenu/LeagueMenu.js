@@ -294,29 +294,48 @@ function LeagueMenu() {
             navigate("/playoffs-menu");
         };
         
-    const jugarPartido = (local, visitante) => {
-        const esControlado = local.player || visitante.player;
-    
-        if (esControlado) {
-            const equipoJugador = local.player ? local : visitante;
-            // En lugar de navegar aquí, indicamos que es un partido controlado
-            return { 
-                esControlado: true,
-                equipoJugador,
-                local,
-                visitante
-            };
-        } else {
-            // Para partidos simulados, retornamos el resultado directamente
-            let golesLocal = Math.floor(Math.random() * 5);
-            let golesVisitante = Math.floor(Math.random() * 5);
-            return { 
-                esControlado: false,
-                golesLocal, 
-                golesVisitante 
-            };
-        }
+const jugarPartido = (local, visitante) => {
+  const esControlado = local.player || visitante.player;
+
+  if (esControlado) {
+    return { 
+      esControlado: true,
+      equipoJugador: local.player ? local : visitante,
+      local,
+      visitante
     };
+  } else {
+    // Simulación basada en ratings
+        const diferenciaRating = local.rating - visitante.rating;
+        const mediaGoles = 2.5;
+
+        // Aumenta la influencia del rating (divisor menor y exponencial)
+        const factorRating = Math.tanh(diferenciaRating / 20); // Más sensible y acotado entre -1 y 1
+
+        const mediaLocal = mediaGoles * (1 + factorRating);
+        const mediaVisitante = mediaGoles * (1 - factorRating);
+
+        // Función para generar goles según distribución Poisson
+        const generarGoles = (media) => {
+        let L = Math.exp(-media);
+        let k = 0;
+        let p = 1;
+        
+        do {
+            k++;
+            p *= Math.random();
+        } while (p > L);
+        
+        return Math.min(k - 1,4);
+        };
+
+    return { 
+      esControlado: false,
+      golesLocal: generarGoles(mediaLocal),
+      golesVisitante: generarGoles(mediaVisitante)
+    };
+  }
+};
 
     const actualizarClasificacion = (jornada) => {
         const nuevaClasificacion = clasificacion.map(equipo => ({ ...equipo })); // ✅ copia profunda
@@ -409,7 +428,8 @@ const jugarPartidoJugador = (partido) => {
                 local: resultado.local, 
                 visitante: resultado.visitante, 
                 equipoJugador: resultado.equipoJugador,
-                jornadaActiva: jornadaActiva
+                jornadaActiva: jornadaActiva,
+                ligaSeleccionada: ligaSeleccionada
             }
         });
     } else {
@@ -464,6 +484,51 @@ const jugarPartidoJugador = (partido) => {
         setModalVisible(false);
     };
 
+    const calcularLast5Resultados = (equipoNombre, pj, liga) => {
+        const calendario = JSON.parse(sessionStorage.getItem('calendario'));
+        const jornadas = calendario[liga];
+        if (!jornadas) return [];
+
+        const resultados = [];
+      
+        // Ordenar por número de jornada
+
+        let dd = false;
+        if(equipoNombre === "Sevilla FC") {
+            dd = true;
+        }
+
+        let lowest = 0;
+        if(pj > 5) lowest = pj-5;
+        else lowest = 0;
+         for (let j = lowest; j < pj; ++j) {
+
+          for (let i = 0; i < jornadas[j].length; ++i) {
+            let partido = jornadas[j][i];
+            let resultado = null;
+            if(dd) {
+                console.log(partido);
+                console.log(partido.local.nombre + partido.golesLocal + " - " + partido.golesVisitante + partido.visitante.nombre);
+            }
+
+            if (partido.local.nombre === equipoNombre) {
+              if (partido.golesLocal > partido.golesVisitante) resultado = 'W';
+              else if (partido.golesLocal === partido.golesVisitante) resultado = 'D';
+              else resultado = 'L';
+            } else if (partido.visitante.nombre === equipoNombre) {
+              if (partido.golesVisitante > partido.golesLocal) resultado = 'W';
+              else if (partido.golesVisitante === partido.golesLocal) resultado = 'D';
+              else resultado = 'L';
+            }
+            if(dd) {
+                console.log(resultado);
+            }
+            if (resultado) resultados.push(resultado);
+          }
+        }
+        return resultados.slice(-5); // últimos 5
+      };
+
     const siguienteJornada = () => {
         if (jornadaActual < jornadas.length - 1) {
             setJornadaActual(jornadaActual + 1);
@@ -488,189 +553,335 @@ const jugarPartidoJugador = (partido) => {
             setJornadaActual(jornadaActual - 1);
         }
     };
+const getLigaLogo = (ligaName) => {
+    let sol = "";
+    if(ligaName == null) {
+        return "laliga";
+    }
+    if(ligaName == "La Liga") {
+        sol = "laliga";
+    }
+    else if(ligaName == "Liga 2") {
+        sol = "laliga2";
+    }
+    else if(ligaName.startsWith("Primera")) {
+        sol = "primera";
+    }
+    else if(ligaName.startsWith("Segunda")) {
+        sol = "segunda";
+    }
+    else if(ligaName.startsWith("Tercera")) {
+        sol = "tercera";
+    }    
+    return sol;
+};
+return (
+    <div className="league-menu">
+        <button
+            onClick={simularTodasLasLigas}
+            style={{
+                marginTop: "10px",
+                padding: "8px 16px",
+                backgroundColor: "#dc3545",
+                color: "#fff",
+                border: "none",
+                borderRadius: "4px",
+                foantWeight: "bold",
+                cursor: "pointer"
+            }}
+        >
+            Simular Todas las Ligas
+        </button>
+        <button onClick={guardarPartidaComoArchivo}>Guardar partida (descargar)</button>
+        <img
+            src={"/assets/images/" + getLigaLogo(ligaSeleccionada) + ".png"}
+            className="logo"
+        />
+        <select class="select-league"
+            value={ligaSeleccionada}
+            onChange={(e) => setLigaSeleccionada(e.target.value)}
+        >
+            {ligasDisponibles.map((liga) => (
+                <option key={liga} value={liga}>
+                    {liga}
+                </option>
+            ))}
+        </select>
 
-    return (
-        
-        <div className="league-menu">
-            <h1>League Menu</h1>
-            <button
-                onClick={simularTodasLasLigas}
-                style={{
-                    marginTop: "10px",
-                    padding: "8px 16px",
-                    backgroundColor: "#dc3545",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "4px",
-                    fontWeight: "bold",
-                    cursor: "pointer"
-                }}
+<div className="main-content">
+    <div className="content-grid">
+                {/* Clasificación */}
+        <div className="clasificacion-container">
+            <h2>Clasificación</h2>
+            <table className="clasificacion-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Equipo</th>
+                        <th>PJ</th>
+                        <th>V</th>
+                        <th>E</th>
+                        <th>D</th>
+                        <th>GF</th>
+                        <th>GC</th>
+                        <th>DG</th>
+                        <th>Pts</th>
+                        <th>Últ.5</th>
+                        <th>Rating</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {clasificacion
+                        .slice()
+                        .sort((a, b) => {
+                            if (b.puntos !== a.puntos) return b.puntos - a.puntos;
+                            return (b.golesFavor - b.golesContra) - (a.golesFavor - a.golesContra);
+                        })
+                        .map((equipo, index) => {
+                            const last5 = calcularLast5Resultados(equipo.nombre, equipo.partidosJugados, ligaSeleccionada);
+                            return (
+                                <tr
+                                    key={equipo.id}
+                                    className={
+                                        index < numAscenso
+                                            ? "ascenso"
+                                            : index < numAscenso + numPlayoff
+                                                ? "playoff"
+                                                : index == 12 && ligaSeleccionada.startsWith("Segunda")
+                                                    ? "playoffDes"
+                                                    : index >= clasificacion.length - numDescenso
+                                                        ? "descenso"
+                                                        : ""
+                                    }
+                                >
+                                    <td>{index + 1}</td>
+                                    <td className="equipo-nombre">
+                                        <img
+                                            src={equipo.imagen || "/assets/images/default.png"}
+                                            alt={equipo.nombre || "Equipo"}
+                                            className="escudo"
+                                        />
+                                        {equipo.nombre || "Equipo"}
+                                    </td>
+                                    <td>{equipo.partidosJugados || 0}</td>
+                                    <td>{equipo.victorias || 0}</td>
+                                    <td>{equipo.empates || 0}</td>
+                                    <td>{equipo.derrotas || 0}</td>
+                                    <td>{equipo.golesFavor || 0}</td>
+                                    <td>{equipo.golesContra || 0}</td>
+                                    <td>{equipo.golesFavor - equipo.golesContra || 0}</td>
+                                    <td>{equipo.puntos || 0}</td>
+                                    <td>
+                                        <div style={{ display: "flex", gap: "2px" }}>
+                                            {last5.map((res, idx) => (
+                                                <div
+                                                    key={idx}
+                                                    title={res}
+                                                    style={{
+                                                        width: "8px",
+                                                        height: "8px",
+                                                        borderRadius: "50%",
+                                                        backgroundColor:
+                                                            res === "W" ? "green" : res === "D" ? "gray" : "red",
+                                                    }}
+                                                ></div>
+                                            ))}
+                                        </div>
+                                    </td>
+                                    <td>{equipo.rating}</td> {/* Mostrar rating */}
+                                </tr>
+                            );
+                        })}
+                </tbody>
+            </table>
+        </div>
+        {/* Jornadas */}
+        <div className="jornadas-container">
+            <div className="jornada-header">
+            <select 
+                value={jornadaActual}
+                onChange={(e) => setJornadaActual(Number(e.target.value))}
+                className="jornada-select"
             >
-                Simular Todas las Ligas
-            </button>
-            <>
-            <button onClick={guardarPartidaComoArchivo}>Guardar partida (descargar)</button>
-            </>
-            <select
-                value={ligaSeleccionada}
-                onChange={(e) => setLigaSeleccionada(e.target.value)}
-            >
-                {ligasDisponibles.map((liga) => (
-                    <option key={liga} value={liga}>
-                        {liga}
+                {jornadas.map((_, index) => (
+                    <option key={index} value={index}>
+                        Jornada {index + 1}
                     </option>
                 ))}
             </select>
-            <div className="previews-container">
-            {/* Preview de la Jornada */}
-            <div className="jornada-preview-container" onClick={() => abrirModal("jornada")}>
-                <h2>Jornada {jornadaActual + 1}</h2>
-                <div className="jornada-preview">
-                    {jornadas[jornadaActual]?.slice(0, 3).map((partido, index) => (
-                        <div key={index} className="partido-preview">
-                            <div className="equipo">
-                                <img
-                                    src={partido.local?.imagen || "/assets/images/default.png"}
-                                    alt={partido.local?.nombre || "Equipo Local"}
-                                    className="escudo"
-                                />
-                                <span>{partido.local?.nombre || "Equipo Local"}</span>
-                            </div>
-                            <span className="vs">
-                                {partido.golesLocal !== undefined && partido.golesVisitante !== undefined
-                                    ? `${partido.golesLocal} - ${partido.golesVisitante}`
-                                    : "vs"}
-                            </span>
-                            <div className="equipo">
-                                <img
-                                    src={partido.visitante?.imagen || "/assets/images/default.png"}
-                                    alt={partido.visitante?.nombre || "Equipo Visitante"}
-                                    className="escudo"
-                                />
-                                <span>{partido.visitante?.nombre || "Equipo Visitante"}</span>
-                            </div>
-                        </div>
-                    ))}
-                </div>
             </div>
-
-            {/* Preview de la Clasificación */}
-            <div className="clasificacion-preview-container" onClick={() => abrirModal("clasificacion")}>
-            <h2>Clasificación</h2>
-            <div className="clasificacion-preview">
-                {clasificacion
-                    .slice() // Crear una copia para no mutar el estado original
-                    .sort((a, b) => {
-                        // Ordenar por puntos y luego por diferencia de goles
-                        if (b.puntos !== a.puntos) return b.puntos - a.puntos;
-                        return (b.golesFavor - b.golesContra) - (a.golesFavor - a.golesContra);
-                    })
-                    .slice(0, 5) // Mostrar solo los primeros 5 equipos
-                    .map((equipo, index) => (
-                        <div key={index} className="equipo-clasificacion-preview">
-                            <span>{index + 1}.</span>
+            <div className="jornada-grid">
+                {jornadas[jornadaActual]?.map((partido, index) => (
+                    <div key={index} className="partido-card">
+                        <div className="equipo local">
+                            <span>{partido.local?.nombre}</span>
                             <img
-                                src={equipo.imagen || "/assets/images/default.png"}
-                                alt={equipo.nombre || "Equipo"}
+                                src={partido.local?.imagen || "/assets/images/default.png"}
+                                alt={partido.local?.nombre}
                                 className="escudo"
                             />
-                            <span>{equipo.nombre || "Equipo"}</span>
-                            <span>{equipo.puntos || 0} pts</span>
                         </div>
-                    ))}
+                        <div className="resultado">
+                            {partido.golesLocal !== undefined && partido.golesVisitante !== undefined
+                                ? `${partido.golesLocal} - ${partido.golesVisitante}`
+                                : "vs"
+                            }
+                        </div>
+                        <div className="equipo visitante">
+                            <img
+                                src={partido.visitante?.imagen || "/assets/images/default.png"}
+                                alt={partido.visitante?.nombre}
+                                className="escudo"
+                            />
+                            <span>{partido.visitante?.nombre}</span>
+                        </div>
+                    </div>
+                ))}
+                {/* Partidos Pendientes o Botón de Simular */}
+        {partidosPendientes.length > 0 ? (
+            <div>
+                <h2>Partidos Pendientes</h2>
+                {partidosPendientes.map((partido, index) => (
+                    <div
+                        key={index}
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            backgroundColor: "#f8f9fa",
+                            borderRadius: "8px",
+                            padding: "10px 20px",
+                            marginBottom: "10px",
+                            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+                        }}
+                    >
+                        <div style={{ display: "flex", alignItems: "center", flex: 1 }}>
+                            <img
+                                src={partido.local.imagen || "/assets/images/default.png"}
+                                alt={partido.local.nombre || "Equipo Local"}
+                                style={{
+                                    width: "40px",
+                                    height: "40px",
+                                    marginRight: "10px",
+                                    objectFit: "contain",
+                                }}
+                            />
+                            <span style={{ fontSize: "16px", fontWeight: "bold" }}>
+                                {partido.local.nombre || "Equipo Local"}
+                            </span>
+                        </div>
+
+                        <span
+                            style={{
+                                fontWeight: "bold",
+                                fontSize: "18px",
+                                flex: "0 0 auto",
+                                textAlign: "center",
+                            }}
+                        >
+                            vs
+                        </span>
+
+                        <div style={{ display: "flex", alignItems: "center", flex: 1, justifyContent: "flex-end" }}>
+                            <span style={{ fontSize: "16px", fontWeight: "bold", marginRight: "10px" }}>
+                                {partido.visitante.nombre || "Equipo Visitante"}
+                            </span>
+                            <img
+                                src={partido.visitante.imagen || "/assets/images/default.png"}
+                                alt={partido.visitante.nombre || "Equipo Visitante"}
+                                style={{
+                                    width: "40px",
+                                    height: "40px",
+                                    objectFit: "contain",
+                                }}
+                            />
+                        </div>
+
+                        <button
+                            onClick={() => jugarPartidoJugador(partido)}
+                            style={{
+                                marginLeft: "20px",
+                                padding: "5px 15px",
+                                backgroundColor: "#007bff",
+                                color: "#fff",
+                                border: "none",
+                                borderRadius: "4px",
+                                cursor: "pointer",
+                                fontWeight: "bold",
+                            }}
+                        >
+                            Jugar
+                        </button>
+                    </div>
+                ))}
+            </div>
+        ) : (
+            <button
+                onClick={jugarRestoPartidos}
+                disabled={ligaFinalizada}
+                style={{
+                    padding: "10px 20px",
+                    backgroundColor: ligaFinalizada ? "#6c757d" : "#28a745",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "4px",
+                    cursor: ligaFinalizada ? "not-allowed" : "pointer",
+                    opacity: ligaFinalizada ? 0.6 : 1,
+                }}
+            >
+                Simular Resto de Partidos
+            </button>
+        )}
             </div>
         </div>
-        </div>
-            {/* Modal */}
-            {modalVisible && (
-                <div className="modal-overlay" onClick={cerrarModal}>
-                    <div
-                        className="modal-content"
-                        onClick={(e) => e.stopPropagation()} // Evitar cerrar al hacer clic dentro del modal
-                    >
-                        {modalType === "jornada" && (
-                            <>
-                                <h2>Jornada {jornadaActual + 1} de {jornadas.length}</h2>
-                                <div className="jornada-detalle">
-                                    {jornadas[jornadaActual]?.map((partido, index) => (
-                                        <div key={index} className="partido">
-                                            <div className="equipo">
-                                                <img
-                                                    src={partido.local?.imagen || "/assets/images/default.png"}
-                                                    alt={partido.local?.nombre || "Equipo Local"}
-                                                    className="escudo"
-                                                />
-                                                <span>{partido.local?.nombre || "Equipo Local"}</span>
-                                            </div>
-                                            <span className="vs">
-                                                {partido.golesLocal !== undefined && partido.golesVisitante !== undefined
-                                                    ? `${partido.golesLocal} - ${partido.golesVisitante}`
-                                                    : "vs"}
-                                            </span>
-                                            <div className="equipo">
-                                                <img
-                                                    src={partido.visitante?.imagen || "/assets/images/default.png"}
-                                                    alt={partido.visitante?.nombre || "Equipo Visitante"}
-                                                    className="escudo"
-                                                />
-                                                <span>{partido.visitante?.nombre || "Equipo Visitante"}</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                                <div className="navegacion-jornadas">
-                                    <button onClick={anteriorJornada} disabled={jornadaActual === 0}>
-                                        ⬅ Anterior
-                                    </button>
-                                    <button
-                                        onClick={siguienteJornada}
-                                        disabled={jornadaActual === jornadas.length - 1}
-                                    >
-                                        Siguiente ➡
-                                    </button>
-                                </div>
-                            </>
-                        )}
+    </div>
+</div>
 
-                        {modalType === "clasificacion" && (
-                            <>
-                                <h2>Clasificación</h2>
-                                <table className="clasificacion-detalle">
-                                    <thead>
-                                        <tr>
-                                            <th>#</th>
-                                            <th>Equipo</th>
-                                            <th>PJ</th>
-                                            <th>V</th>
-                                            <th>E</th>
-                                            <th>D</th>
-                                            <th>GF</th>
-                                            <th>GC</th>
-                                            <th>DG</th>
-                                            <th>Puntos</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {clasificacion
-                                            .slice() // Crear una copia para no mutar el estado original
-                                            .sort((a, b) => {
-                                                // Ordenar por puntos y luego por diferencia de goles
-                                                if (b.puntos !== a.puntos) return b.puntos - a.puntos;
-                                                return (b.golesFavor - b.golesContra) - (a.golesFavor - a.golesContra);
-                                            })
-                                            .map((equipo, index) => (
+        {/* Modal para la clasificación */}
+        {modalVisible && (
+            <div className="modal-overlay" onClick={cerrarModal}>
+                <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                    {modalType === "clasificacion" && (
+                        <>
+                            <h2>Clasificación</h2>
+                            <table className="clasificacion-detalle">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Equipo</th>
+                                        <th>PJ</th>
+                                        <th>V</th>
+                                        <th>E</th>
+                                        <th>D</th>
+                                        <th>GF</th>
+                                        <th>GC</th>
+                                        <th>DG</th>
+                                        <th>Puntos</th>
+                                        <th>Últ. 5</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {clasificacion
+                                        .slice()
+                                        .sort((a, b) => {
+                                            if (b.puntos !== a.puntos) return b.puntos - a.puntos;
+                                            return (b.golesFavor - b.golesContra) - (a.golesFavor - a.golesContra);
+                                        })
+                                        .map((equipo, index) => {
+                                            const last5 = calcularLast5Resultados(equipo.nombre, equipo.partidosJugados, ligaSeleccionada);
+                                            return (
                                                 <tr
                                                     key={equipo.id}
                                                     className={
                                                         index < numAscenso
-                                                        ? "ascenso"
-                                                        : index < numAscenso + numPlayoff
-                                                        ? "playoff"
-                                                        : index == 12 && ligaSeleccionada.startsWith("Segunda")
-                                                        ? "playoffDes"
-                                                        : index >= clasificacion.length - numDescenso
-                                                        ? "descenso"
-                                                        : ""
+                                                            ? "ascenso"
+                                                            : index < numAscenso + numPlayoff
+                                                                ? "playoff"
+                                                                : index == 12 && ligaSeleccionada.startsWith("Segunda")
+                                                                    ? "playoffDes"
+                                                                    : index >= clasificacion.length - numDescenso
+                                                                        ? "descenso"
+                                                                        : ""
                                                     }
                                                 >
                                                     <td>{index + 1}</td>
@@ -690,115 +901,37 @@ const jugarPartidoJugador = (partido) => {
                                                     <td>{equipo.golesContra || 0}</td>
                                                     <td>{equipo.golesFavor - equipo.golesContra || 0}</td>
                                                     <td>{equipo.puntos || 0}</td>
+                                                    <td>
+                                                        <div style={{ display: "flex", gap: "4px" }}>
+                                                            {last5.map((res, idx) => (
+                                                                <div
+                                                                    key={idx}
+                                                                    title={res}
+                                                                    style={{
+                                                                        width: "12px",
+                                                                        height: "12px",
+                                                                        borderRadius: "50%",
+                                                                        backgroundColor:
+                                                                            res === "W" ? "green" : res === "D" ? "gray" : "red",
+                                                                    }}
+                                                                ></div>
+                                                            ))}
+                                                        </div>
+                                                    </td>
                                                 </tr>
-                                            ))}
-                                    </tbody>
-                                </table>
-                            </>
-                        )}
-                    </div>
+                                            );
+                                        })}
+                                </tbody>
+                            </table>
+                        </>
+                    )}
                 </div>
-            )}
-{partidosPendientes.length > 0 ? (
-    <div>
-        <h2>Partidos Pendientes</h2>
-        {partidosPendientes.map((partido, index) => (
-            <div
-                key={index}
-                style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    backgroundColor: "#f8f9fa", // Fondo claro
-                    borderRadius: "8px",
-                    padding: "10px 20px",
-                    marginBottom: "10px",
-                    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)", // Sombra ligera
-                }}
-            >
-                {/* Equipo Local */}
-                <div style={{ display: "flex", alignItems: "center", flex: 1 }}>
-                    <img
-                        src={partido.local.imagen || "/assets/images/default.png"}
-                        alt={partido.local.nombre || "Equipo Local"}
-                        style={{
-                            width: "40px", // Tamaño fijo
-                            height: "40px", // Tamaño fijo
-                            marginRight: "10px",
-                            objectFit: "contain", // Ajustar sin deformar
-                        }}
-                    />
-                    <span style={{ fontSize: "16px", fontWeight: "bold" }}>
-                        {partido.local.nombre || "Equipo Local"}
-                    </span>
-                </div>
-
-                {/* VS */}
-                <span
-                    style={{
-                        fontWeight: "bold",
-                        fontSize: "18px",
-                        flex: "0 0 auto", // Evitar que se estire
-                        textAlign: "center",
-                    }}
-                >
-                    vs
-                </span>
-
-                {/* Equipo Visitante */}
-                <div style={{ display: "flex", alignItems: "center", flex: 1, justifyContent: "flex-end" }}>
-                    <span style={{ fontSize: "16px", fontWeight: "bold", marginRight: "10px" }}>
-                        {partido.visitante.nombre || "Equipo Visitante"}
-                    </span>
-                    <img
-                        src={partido.visitante.imagen || "/assets/images/default.png"}
-                        alt={partido.visitante.nombre || "Equipo Visitante"}
-                        style={{
-                            width: "40px", // Tamaño fijo
-                            height: "40px", // Tamaño fijo
-                            objectFit: "contain", // Ajustar sin deformar
-                        }}
-                    />
-                </div>
-
-                {/* Botón para jugar */}
-                <button
-                    onClick={() => jugarPartidoJugador(partido)}
-                    style={{
-                        marginLeft: "20px",
-                        padding: "5px 15px",
-                        backgroundColor: "#007bff",
-                        color: "#fff",
-                        border: "none",
-                        borderRadius: "4px",
-                        cursor: "pointer",
-                        fontWeight: "bold",
-                    }}
-                >
-                    Jugar
-                </button>
             </div>
-        ))}
+        )}
+
+        
     </div>
-) : (
-<button
-    onClick={jugarRestoPartidos}
-    disabled={ligaFinalizada}
-    style={{
-        padding: "10px 20px",
-        backgroundColor: ligaFinalizada ? "#6c757d" : "#28a745",
-        color: "#fff",
-        border: "none",
-        borderRadius: "4px",
-        cursor: ligaFinalizada ? "not-allowed" : "pointer",
-        opacity: ligaFinalizada ? 0.6 : 1,
-    }}
->
-    Simular Resto de Partidos
-</button>
-)}
-        </div>
-    );
+);
 }
 
 export default LeagueMenu;

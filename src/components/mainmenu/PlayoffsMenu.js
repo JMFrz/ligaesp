@@ -9,7 +9,34 @@ function PlayoffsMenu() {
     const [rondaActiva, setRondaActiva] = useState(0);
     const navigate = useNavigate();
     const [ascendidos, setAscendidos] = useState({});
+    // Añadir este estado al inicio del componente
+    const [movimientos, setMovimientos] = useState({
+        ascensosDirectos: {},
+        descensosDirectos: {},
+        ascensosPlayoff: {}
+    });
+    // Añadir useEffect para cargar los datos iniciales
+    useEffect(() => {
+        const ascensosDirectos = {
+            "Liga 2": JSON.parse(localStorage.getItem("ascensoDirecto_Liga2") || "[]"),
+            "Primera RFEF": JSON.parse(localStorage.getItem("ascensoDirecto_PrimeraRFEF") || "[]"),
+            "Segunda RFEF": JSON.parse(localStorage.getItem("ascensoDirecto_SegundaRFEF") || "[]"),
+            "Tercera RFEF": JSON.parse(localStorage.getItem("ascensoDirecto_TerceraRFEF") || "[]")
+        };
 
+        const descensosDirectos = {
+            "La Liga": JSON.parse(localStorage.getItem("descenso_LaLiga") || "[]"),
+            "Liga 2": JSON.parse(localStorage.getItem("descenso_Liga2") || "[]"),
+            "Primera RFEF": JSON.parse(localStorage.getItem("descenso_PrimeraRFEF") || "[]"),
+            "Segunda RFEF": JSON.parse(localStorage.getItem("descenso_SegundaRFEF") || "[]")
+        };
+
+        setMovimientos({
+            ascensosDirectos,
+            descensosDirectos,
+            ascensosPlayoff: ascendidos
+        });
+    }, []);
     useEffect(() => {
         const stored = JSON.parse(localStorage.getItem("playoffs_brackets")) || {};
         setPlayoffs(stored);
@@ -37,12 +64,58 @@ function PlayoffsMenu() {
         const ligaData = playoffs[ligaSeleccionada];
 
         if (partido.golesLocalIda == null) {
-            partido.golesLocalIda = Math.floor(Math.random() * 5);
-            partido.golesVisitanteIda = Math.floor(Math.random() * 5);
+           const diferenciaRating = match.local.rating - match.visitante.rating;
+        const mediaGoles = 2.5;
+
+        // Aumenta la influencia del rating (divisor menor y exponencial)
+        const factorRating = Math.tanh(diferenciaRating / 20); // Más sensible y acotado entre -1 y 1
+
+        const mediaLocal = mediaGoles * (1 + factorRating);
+        const mediaVisitante = mediaGoles * (1 - factorRating);
+
+        // Función para generar goles según distribución Poisson
+        const generarGoles = (media) => {
+            let L = Math.exp(-media);
+            let k = 0;
+            let p = 1;
+
+            do {
+                k++;
+                p *= Math.random();
+            } while (p > L);
+
+            // Limitar el máximo de goles a 4
+            return Math.min(k - 1, 4);
+        };
+        partido.golesLocalIda = generarGoles(mediaLocal);
+        partido.golesVisitanteIda = generarGoles(mediaVisitante);
+
         } else if (partido.golesLocalVuelta == null) {
-            partido.golesLocalVuelta = Math.floor(Math.random() * 5);
-            partido.golesVisitanteVuelta = Math.floor(Math.random() * 5);
-            partido.jugado = true;
+                       const diferenciaRating = match.local.rating - match.visitante.rating;
+        const mediaGoles = 2.5;
+
+        // Aumenta la influencia del rating (divisor menor y exponencial)
+        const factorRating = Math.tanh(diferenciaRating / 20); // Más sensible y acotado entre -1 y 1
+
+        const mediaLocal = mediaGoles * (1 + factorRating);
+        const mediaVisitante = mediaGoles * (1 - factorRating);
+
+        // Función para generar goles según distribución Poisson
+        const generarGoles = (media) => {
+        let L = Math.exp(-media);
+        let k = 0;
+        let p = 1;
+        
+        do {
+            k++;
+            p *= Math.random();
+        } while (p > L);
+        
+        return Math.min(k - 1,4);
+        };
+        partido.golesLocalVuelta = generarGoles(mediaLocal);
+        partido.golesVisitanteVuelta = generarGoles(mediaVisitante);
+        partido.jugado = true;
         }
 
                     // ✅ Guardar perdedores en descenso directo
@@ -216,9 +289,9 @@ function PlayoffsMenu() {
                         style={{ height: "2em", width: "auto"}} 
                     />
                 )}
-                <strong>{match.local?.nombre}</strong>
+                <strong>{match.local?.nombre} {match.local?.rating}</strong>
                 <span>vs</span>
-                <strong>{match.visitante?.nombre}</strong>
+                <strong>{match.visitante?.nombre} {match.visitante?.rating}</strong>
                 {match.visitante?.imagen && (
                     <img 
                         src={match.visitante.imagen} 
@@ -241,6 +314,49 @@ function PlayoffsMenu() {
                     🏆 Asciende: {getGanadorDeCruce(match)?.nombre}
                 </p>
             )}
+        </div>
+    );
+
+    // Añadir esta sección en el return del componente, antes o después de mostrar los playoffs
+    const renderMovimientos = () => (
+        <div style={{ margin: "20px 0", padding: "15px", backgroundColor: "#f8f9fa", borderRadius: "8px" }}>
+            <h3>Resumen de Movimientos</h3>
+            
+            {/* Ascensos Directos */}
+            <div style={{ marginBottom: "15px" }}>
+                <h4 style={{ color: "#28a745" }}>🔼 Ascensos Directos</h4>
+                {Object.entries(movimientos.ascensosDirectos).map(([liga, equipos]) => (
+                    equipos.length > 0 && (
+                        <div key={liga}>
+                            <strong>{liga}:</strong> {equipos.join(", ")}
+                        </div>
+                    )
+                ))}
+            </div>
+
+            {/* Descensos Directos */}
+            <div style={{ marginBottom: "15px" }}>
+                <h4 style={{ color: "#dc3545" }}>🔽 Descensos Directos</h4>
+                {Object.entries(movimientos.descensosDirectos).map(([liga, equipos]) => (
+                    equipos.length > 0 && (
+                        <div key={liga}>
+                            <strong>{liga}:</strong> {equipos.join(", ")}
+                        </div>
+                    )
+                ))}
+            </div>
+
+            {/* Ascensos por Playoff */}
+            <div>
+                <h4 style={{ color: "#17a2b8" }}>🎯 Ascensos por Playoff</h4>
+                {Object.entries(movimientos.ascensosPlayoff).map(([liga, equipos]) => (
+                    equipos?.length > 0 && (
+                        <div key={liga}>
+                            <strong>{liga}:</strong> {equipos.join(", ")}
+                        </div>
+                    )
+                ))}
+            </div>
         </div>
     );
 
@@ -388,6 +504,151 @@ function PlayoffsMenu() {
         }
     };
 
+const simularTodosLosPlayoffs = (playoffs, setPlayoffs, setAscendidos) => {
+    const playoffsActualizados = { ...playoffs };
+
+    // Simular cada liga una por una
+    Object.keys(playoffsActualizados).forEach(liga => {
+        const ligaData = playoffsActualizados[liga];
+
+        // Liga 2 y Primera RFEF (con rondas normales)
+        if (ligaData.rondas) {
+            ligaData.rondas.forEach(ronda => {
+                if (Array.isArray(ronda[0])) {
+                    // Primera RFEF: múltiples brackets
+                    ronda.forEach(bracket => {
+                        bracket.forEach(match => {
+                            if (!match.jugado) {
+                                match.golesLocalIda = Math.floor(Math.random() * 5);
+                                match.golesVisitanteIda = Math.floor(Math.random() * 5);
+                                match.golesLocalVuelta = Math.floor(Math.random() * 5);
+                                match.golesVisitanteVuelta = Math.floor(Math.random() * 5);
+                                match.jugado = true;
+                            }
+                        });
+                    });
+                } else {
+                    // Liga 2: ronda normal
+                    ronda.forEach(match => {
+                        if (!match.jugado) {
+                            match.golesLocalIda = Math.floor(Math.random() * 5);
+                            match.golesVisitanteIda = Math.floor(Math.random() * 5);
+                            match.golesLocalVuelta = Math.floor(Math.random() * 5);
+                            match.golesVisitanteVuelta = Math.floor(Math.random() * 5);
+                            match.jugado = true;
+                        }
+                    });
+                }
+            });
+            ligaData.finalPendiente = false;
+        }
+
+        // Segunda RFEF y Tercera RFEF (con brackets)
+        if (ligaData.tipo === "brackets" || ligaData.tipo === "tercera") {
+            // Simular semifinales
+            ligaData.brackets.forEach(bracket => {
+                bracket.semifinales.forEach(match => {
+                    if (!match.jugado) {
+                        match.golesLocalIda = Math.floor(Math.random() * 5);
+                        match.golesVisitanteIda = Math.floor(Math.random() * 5);
+                        match.golesLocalVuelta = Math.floor(Math.random() * 5);
+                        match.golesVisitanteVuelta = Math.floor(Math.random() * 5);
+                        match.jugado = true;
+                    }
+                });
+
+                // Crear y simular finales
+                const ganadores = bracket.semifinales.map(getGanadorDeCruce).filter(Boolean);
+                if (ganadores.length === 2) {
+                    bracket.final = [createIdaYVueltaMatch(ganadores[0], ganadores[1])];
+                    const finalMatch = bracket.final[0];
+                    finalMatch.golesLocalIda = Math.floor(Math.random() * 5);
+                    finalMatch.golesVisitanteIda = Math.floor(Math.random() * 5);
+                    finalMatch.golesLocalVuelta = Math.floor(Math.random() * 5);
+                    finalMatch.golesVisitanteVuelta = Math.floor(Math.random() * 5);
+                    finalMatch.jugado = true;
+                }
+            });
+
+            // Para Tercera RFEF, simular finales de ascenso
+            if (ligaData.tipo === "tercera") {
+                const ganadoresBrackets = ligaData.brackets
+                    .map(b => getGanadorDeCruce(b.final[0]))
+                    .filter(Boolean);
+                
+                const finales = [];
+                for (let i = 0; i < ganadoresBrackets.length; i += 2) {
+                    if (ganadoresBrackets[i + 1]) {
+                        const final = createIdaYVueltaMatch(ganadoresBrackets[i], ganadoresBrackets[i + 1]);
+                        final.golesLocalIda = Math.floor(Math.random() * 5);
+                        final.golesVisitanteIda = Math.floor(Math.random() * 5);
+                        final.golesLocalVuelta = Math.floor(Math.random() * 5);
+                        final.golesVisitanteVuelta = Math.floor(Math.random() * 5);
+                        final.jugado = true;
+                        finales.push(final);
+                    }
+                }
+                ligaData.finales = finales;
+            }
+
+            // Guardar ganadores
+            const ganadoresFinales = [];
+            if (ligaData.tipo === "tercera") {
+                ganadoresFinales.push(...ligaData.finales?.map(getGanadorDeCruce).filter(Boolean));
+            } else {
+                ganadoresFinales.push(...ligaData.brackets.map(b => getGanadorDeCruce(b.final[0])).filter(Boolean));
+            }
+
+            // Actualizar ascendidos
+            if (ganadoresFinales.length > 0) {
+                setAscendidos(prev => {
+                    const actualizados = {
+                        ...prev,
+                        [liga]: ganadoresFinales.map(g => g.nombre)
+                    };
+                    localStorage.setItem("ascendidos_playoffs", JSON.stringify(actualizados));
+                    
+                    // Guardar también en la clave específica
+                    const claveAscensoPlayoff = {
+                        "Segunda RFEF": "ascensoPlayoff_SegundaRFEF",
+                        "Tercera RFEF": "ascensoPlayoff_TerceraRFEF"
+                    }[liga];
+                    if (claveAscensoPlayoff) {
+                        localStorage.setItem(claveAscensoPlayoff, JSON.stringify(ganadoresFinales.map(g => g.nombre)));
+                    }
+                    return actualizados;
+                });
+            }
+        }
+
+        // Playoffs de descenso
+        if (ligaData.tipo === "descenso_directo") {
+            ligaData.partidos.forEach(match => {
+                if (!match.jugado) {
+                    match.golesLocalIda = Math.floor(Math.random() * 5);
+                    match.golesVisitanteIda = Math.floor(Math.random() * 5);
+                    match.golesLocalVuelta = Math.floor(Math.random() * 5);
+                    match.golesVisitanteVuelta = Math.floor(Math.random() * 5);
+                    match.jugado = true;
+
+                    const perdedor = getPerdedorDeCruce(match);
+                    if (perdedor) {
+                        const descendidos = JSON.parse(localStorage.getItem("equipos_descendidos")) || [];
+                        if (!descendidos.includes(perdedor.nombre)) {
+                            descendidos.push(perdedor.nombre);
+                            localStorage.setItem("equipos_descendidos", JSON.stringify(descendidos));
+                        }
+                    }
+                }
+            });
+        }
+    });
+
+    // Actualizar estado y localStorage
+    setPlayoffs(playoffsActualizados);
+    localStorage.setItem("playoffs_brackets", JSON.stringify(playoffsActualizados));
+};
+    
     return (
         <div>
             <h2>Playoffs</h2>
@@ -400,52 +661,91 @@ function PlayoffsMenu() {
                     <option key={index} value={liga}>{liga}</option>
                 ))}
             </select>
+<div style={{ display: "flex", gap: "20px", marginTop: "40px" }}>
+            <button
+                onClick={() => simularTodosLosPlayoffs(playoffs, setPlayoffs, setAscendidos)}
+                style={{
+                    padding: "12px 20px",
+                    backgroundColor: "#007bff",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "6px",
+                    fontWeight: "bold",
+                    fontSize: "16px",
+                    cursor: "pointer"
+                }}
+            >
+                Simular todos los playoffs
+            </button>
+
+            <button
+                disabled={!playoffsCompletados(playoffs)}
+                onClick={() => {
+                    localStorage.setItem("esLigaPrimera", JSON.stringify(false));
+                    const nLIga = JSON.parse(localStorage.getItem("numLigas") || "[]");
+                    localStorage.setItem("numLigas", JSON.stringify(nLIga+1));
+                    window.location.href = "/league-generation";
+                }}
+                style={{
+                    padding: "12px 20px",
+                    backgroundColor: playoffsCompletados(playoffs) ? "#28a745" : "#ccc",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "6px",
+                    fontWeight: "bold",
+                    fontSize: "16px",
+                    cursor: playoffsCompletados(playoffs) ? "pointer" : "not-allowed"
+                }}
+            >
+                Finalizar temporada y generar nuevas ligas
+            </button>
+        </div>
+            {/* Añadimos el renderMovimientos aquí, justo después del select */}
+            {/* renderMovimientos()*/}
 
             <div style={{ marginTop: "20px" }}>{renderContenido()}</div>
+            
             <div style={{ display: "flex" }}>
                 {/* Panel lateral izquierdo */}
                 <div style={{ width: "250px", marginRight: "30px" }}>
                     <h3 style={{ borderBottom: "1px solid #ccc" }}>🏆 Ascendidos</h3>
                     {Object.entries(ascendidos).map(([liga, equipos]) => (
-                    <div key={liga}>
-                        <strong>{liga}:</strong>
-                        <ul>
-                        {equipos.map((nombre, i) => (
-                            <li key={i}>{nombre}</li>
-                        ))}
-                        </ul>
-                    </div>
+                        <div key={liga}>
+                            <strong>{liga}:</strong>
+                            <ul>
+                                {equipos.map((nombre, i) => (
+                                    <li key={i}>{nombre}</li>
+                                ))}
+                            </ul>
+                        </div>
                     ))}
                 </div>
+            </div>
 
-                {/* Contenido principal de playoffs */}
-                </div>
-                {/* Finalizar temporada */}
-                <button
-                    disabled={!playoffsCompletados(playoffs)}
-                    onClick={() => {
-                        localStorage.setItem("esLigaPrimera", JSON.stringify(false));
-                        const nLIga = JSON.parse(localStorage.getItem("numLigas") || "[]");
-                        localStorage.setItem("numLigas", JSON.stringify(nLIga+1));
-                        window.location.href = "/league-generation";
-                    }}
-                    style={{
-                        marginTop: "40px",
-                        padding: "12px 20px",
-                        backgroundColor: playoffsCompletados(playoffs) ? "#28a745" : "#ccc",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "6px",
-                        fontWeight: "bold",
-                        fontSize: "16px",
-                        cursor: playoffsCompletados(playoffs) ? "pointer" : "not-allowed"
-                    }}
-                >
-                    Finalizar temporada y generar nuevas ligas
-                </button>
+            {/* Finalizar temporada */}
+            <button
+                disabled={!playoffsCompletados(playoffs)}
+                onClick={() => {
+                    localStorage.setItem("esLigaPrimera", JSON.stringify(false));
+                    const nLIga = JSON.parse(localStorage.getItem("numLigas") || "[]");
+                    localStorage.setItem("numLigas", JSON.stringify(nLIga+1));
+                    window.location.href = "/league-generation";
+                }}
+                style={{
+                    marginTop: "40px",
+                    padding: "12px 20px",
+                    backgroundColor: playoffsCompletados(playoffs) ? "#28a745" : "#ccc",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "6px",
+                    fontWeight: "bold",
+                    fontSize: "16px",
+                    cursor: playoffsCompletados(playoffs) ? "pointer" : "not-allowed"
+                }}
+            >
+                Finalizar temporada y generar nuevas ligas
+            </button>
         </div>
-        
-        
     );
 }
 

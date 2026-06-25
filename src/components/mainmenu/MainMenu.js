@@ -4,8 +4,10 @@ import "../styles/mainmenu/MainMenu.css";
 function MainMenu() {
     return (
         localStorage.clear(),
+        sessionStorage.clear(),
         <div className="main-menu">
-            <div className="menu-options>">
+            <h1 className="menu-title">Liga España Emulator</h1>
+            <div className="menu-options">
                 <Link to="start-page" className="menu-link">
                     <button className="menu-button">
                         Play
@@ -16,4 +18,4 @@ function MainMenu() {
     );
 }
 
-export default MainMenu; // Asegúrate de exportar por defecto
+export default MainMenu;
