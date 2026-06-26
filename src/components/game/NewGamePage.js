@@ -267,7 +267,7 @@ const NewGamePage = () => {
     setLog([]);
     setIsPlaying(true);
     setOpportunity(null);
-    setHintsLeft(2);
+    setHintsLeft(1);
     setRevealedHints([]);
     setHintIndex(0);
     setCardsPlayer({ yellows: 0, reds: 0 });
